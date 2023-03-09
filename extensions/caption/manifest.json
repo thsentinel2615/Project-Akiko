@@ -1,0 +1,12 @@
+{
+    "display_name": "Image Captioning",
+    "requires": [
+        "caption"
+    ],
+    "js": "index.js",
+    "css": "style.css",
+    "assets": [
+        "image-solid.svg",
+        "spinner-solid.svg"
+    ]
+}
