@@ -5,7 +5,7 @@ import markdown
 import argparse
 from transformers import AutoTokenizer, AutoProcessor, pipeline
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM
-from transformers import BlipForConditionalGeneration, GPT2Tokenizers
+from transformers import BlipForConditionalGeneration, GPT2Tokenizer
 import unicodedata
 import torch
 import time
@@ -24,12 +24,16 @@ colorama_init()
 # Constants
 # Also try: 'Qiliang/bart-large-cnn-samsum-ElectrifAi_v10'
 DEFAULT_SUMMARIZATION_MODEL = 'Qiliang/bart-large-cnn-samsum-ChatGPT_v3'
+# Also try: 'joeddav/distilbert-base-uncased-go-emotions-student'
 DEFAULT_CLASSIFICATION_MODEL = 'bhadresh-savani/distilbert-base-uncased-emotion'
-# Also try: 'Salesforce/blip-image-captioning-large' or 'microsoft/git-large-r-textcaps'
-DEFAULT_CAPTIONING_MODEL = 'Salesforce/blip-image-captioning-base'
+# Also try: 'Salesforce/blip-image-captioning-base' or 'microsoft/git-large-r-textcaps'
+DEFAULT_CAPTIONING_MODEL = 'Salesforce/blip-image-captioning-large'
 DEFAULT_KEYPHRASE_MODEL = 'ml6team/keyphrase-extraction-distilbert-inspec'
+DEFAULT_PROMPT_MODEL = 'FredZhang7/anime-anything-promptgen-v2'
 DEFAULT_TEXT_MODEL = 'PygmalionAI/pygmalion-6b'
-#ALL_MODULES = ['caption', 'summarize', 'classify', 'keywords', 'prompt', 'sd', 'text']
+DEFAULT_SD_MODEL = "ckpt/anything-v4.5-vae-swapped"
+
+#ALL_MODULES = ['caption', 'summarize', 'classify', 'keywords', 'prompt', 'sd']
 DEFAULT_SUMMARIZE_PARAMS = {
     'temperature': 1.0,
     'repetition_penalty': 1.0,
@@ -38,14 +42,29 @@ DEFAULT_SUMMARIZE_PARAMS = {
     'length_penalty': 1.5,
     'bad_words': ["\n", '"', "*", "[", "]", "{", "}", ":", "(", ")", "<", ">", "Â"]
 }
-
+DEFAULT_TEXT_PARAMS = {
+    'do_sample': True,
+    'max_length':2048,
+    'use_cache':True,
+    'min_new_tokens':10,
+    'temperature':0.71,
+    'repetition_penalty':1.15,
+    'top_p':0.9,
+    'top_k':40,
+    'repetition_penalty': 1,
+    'num_beams': 1,
+    'penalty_alpha': 0,
+    'length_penalty': 1,
+    'no_repeat_ngram_size': 0,
+    'early_stopping': False,
+}
 class SplitArgs(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, values.replace('"', '').replace("'", '').split(','))
 
 # Script arguments
 parser = argparse.ArgumentParser(
-    prog='Project Akiko', description='Web API for transformers models')
+    prog='TavernAI Extras', description='Web API for transformers models')
 parser.add_argument('--port', type=int,
                     help="Specify the port on which the application is hosted")
 parser.add_argument('--listen', action='store_true',
@@ -62,6 +81,12 @@ parser.add_argument('--captioning-model',
                     help="Load a custom captioning model")
 parser.add_argument('--keyphrase-model',
                     help="Load a custom keyphrase extraction model")
+parser.add_argument('--prompt-model',
+                    help="Load a custom prompt generation model")
+parser.add_argument('--sd-model',
+                    help="Load a custom SD image generation model")
+parser.add_argument('--sd-cpu',
+                    help="Force the SD pipeline to run on the CPU")
 parser.add_argument('--text-model',
                     help="Load a custom text generation model")
 parser.add_argument('--enable-modules', action=SplitArgs, default=[],
@@ -75,6 +100,8 @@ summarization_model = args.summarization_model if args.summarization_model else 
 classification_model = args.classification_model if args.classification_model else DEFAULT_CLASSIFICATION_MODEL
 captioning_model = args.captioning_model if args.captioning_model else DEFAULT_CAPTIONING_MODEL
 keyphrase_model = args.keyphrase_model if args.keyphrase_model else DEFAULT_KEYPHRASE_MODEL
+prompt_model = args.prompt_model if args.prompt_model else DEFAULT_PROMPT_MODEL
+sd_model = args.sd_model if args.sd_model else DEFAULT_SD_MODEL
 text_model = args.text_model if args.text_model else DEFAULT_TEXT_MODEL
 modules = args.enable_modules if args.enable_modules and len(args.enable_modules) > 0 else []
 
@@ -109,10 +136,47 @@ if 'keywords' in modules:
     import pipelines as pipelines
     keyphrase_pipe = pipelines.KeyphraseExtractionPipeline(keyphrase_model)
 
+if 'prompt' in modules:
+    print('Initializing a prompt generator')
+    gpt_tokenizer = GPT2Tokenizer.from_pretrained('distilgpt2')
+    gpt_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    gpt_model = AutoModelForCausalLM.from_pretrained(prompt_model)
+    prompt_generator = pipeline('text-generation', model=gpt_model, tokenizer=gpt_tokenizer)
+
+if 'sd' in modules:
+    from diffusers import StableDiffusionPipeline
+    from diffusers import EulerAncestralDiscreteScheduler
+    print('Initializing Stable Diffusion pipeline')
+    sd_device_string = "cuda" if torch.cuda.is_available() and not args.sd_cpu else "cpu"
+    sd_device = torch.device(sd_device_string)
+    sd_torch_dtype = torch.float32 if sd_device_string == "cpu" else torch.float16
+    sd_pipe = StableDiffusionPipeline.from_pretrained(sd_model, custom_pipeline="lpw_stable_diffusion", torch_dtype=sd_torch_dtype).to(sd_device)
+    sd_pipe.safety_checker = lambda images, clip_input: (images, False)
+    sd_pipe.enable_attention_slicing()
+    # pipe.scheduler = KarrasVeScheduler.from_config(pipe.scheduler.config)
+    sd_pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(sd_pipe.scheduler.config)
+
 if 'text' in modules:
     print('Initializing a text generator')
     text_tokenizer = AutoTokenizer.from_pretrained(text_model)
     text_transformer = AutoModelForCausalLM.from_pretrained(text_model, torch_dtype=torch.float16).to(device)
+
+prompt_prefix = "best quality, absurdres, "
+neg_prompt = """lowres, bad anatomy, error body, error hair, error arm,
+error hands, bad hands, error fingers, bad fingers, missing fingers
+error legs, bad legs, multiple legs, missing legs, error lighting,
+error shadow, error reflection, text, error, extra digit, fewer digits,
+cropped, worst quality, low quality, normal quality, jpeg artifacts,
+signature, watermark, username, blurry"""
+
+
+# list of key phrases to be looking for in text (unused for now)
+indicator_list = ['female', 'girl', 'male', 'boy', 'woman', 'man', 'hair', 'eyes', 'skin', 'wears',
+                  'appearance', 'costume', 'clothes', 'body', 'tall', 'short', 'chubby', 'thin',
+                  'expression', 'angry', 'sad', 'blush', 'smile', 'happy', 'depressed', 'long',
+                  'cold', 'breasts', 'chest', 'tail', 'ears', 'fur', 'race', 'species', 'wearing',
+                  'shoes', 'boots', 'shirt', 'panties', 'bra', 'skirt', 'dress', 'kimono', 'wings', 'horns',
+                  'pants', 'shorts', 'leggins', 'sandals', 'hat', 'glasses', 'sweater', 'hoodie', 'sweatshirt']
 
 # Flask init
 app = Flask(__name__)
@@ -196,25 +260,74 @@ def extract_keywords(text: str) -> list:
     text = normalize_string(text)
     return list(keyphrase_pipe(text))
 
-def generate_text(prompt: str) -> str:
+
+def generate_prompt(keywords: list, length: int = 100, num: int = 4) -> str:
+    prompt = ', '.join(keywords)
+    outs = prompt_generator(prompt, max_length=length, num_return_sequences=num, do_sample=True,
+                            repetition_penalty=1.2, temperature=0.7, top_k=4, early_stopping=True)
+    return [out['generated_text'] for out in outs]
+
+
+def generate_image(input: str, steps: int = 30, scale: int = 6) -> Image:
+    prompt = normalize_string(f'{prompt_prefix}{input}')
+    print(prompt)
+
+    image = sd_pipe(
+        prompt=prompt,
+        negative_prompt=neg_prompt,
+        num_inference_steps=steps,
+        guidance_scale=scale,
+    ).images[0]
+
+    image.save("./debug.png")
+    return image
+
+
+def image_to_base64(image: Image):
+    buffered = BytesIO()
+    image.save(buffered, format="JPEG")
+    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8") 
+    return img_str
+
+def generate_text(prompt: str, settings: dict) -> str:
     input_ids = text_tokenizer.encode(prompt, return_tensors="pt").to(device)
+    attention_mask = torch.ones_like(input_ids)
     output = text_transformer.generate(
         input_ids,
-        max_length=2048,
-        do_sample=True,
-        use_cache=True,
-        min_new_tokens=10,
-        temperature=0.71,
-        repetition_penalty=1.15,
-        top_p=0.9,
-        top_k=40
+        max_length=int(settings['max_length']),
+        do_sample=settings['do_sample'],
+        use_cache=settings['use_cache'],
+        typical_p=float(settings['typical_p']),
+        penalty_alpha=float(settings['penalty_alpha']),
+        min_new_tokens=int(settings['min_new_tokens']),
+        temperature=float(settings['temperature']),
+        length_penalty=float(settings['length_penalty']),
+        early_stopping=settings['early_stopping'],
+        repetition_penalty=float(settings['repetition_penalty']),
+        num_beams=int(settings['num_beams']),
+        top_p=float(settings['top_p']),
+        top_k=float(settings['top_k']),
+        no_repeat_ngram_size=float(settings['no_repeat_ngram_size']),
+        attention_mask=attention_mask,
+        pad_token_id=text_tokenizer.pad_token_id,
         )
     if output is not None:
-            generated_text = text_tokenizer.decode(output[0], skip_special_tokens=True)
-            return generated_text
+        generated_text = text_tokenizer.decode(output[0], skip_special_tokens=True)
+        prompt_lines  = [line.strip() for line in str(prompt).split("\n")]
+        response_lines  = [line.strip() for line in str(generated_text).split("\n")]
+        new_amt = (len(response_lines) - len(prompt_lines)) + 1
+        closest_lines = response_lines[-new_amt:]
+        last_line = prompt_lines[-1]
+        if last_line:
+            last_line_words = last_line.split()
+            if len(last_line_words) > 0:
+                filter_word = last_line_words[0]
+                closest_lines[0] = closest_lines[0].replace(filter_word, '', 1).lstrip()
+                result_text = "\n".join(closest_lines)
+        results = {"text" : result_text}
+        return results.replace(r'<|endoftext|>', '')
     else:
-        return "This is an empty message. Something went wrong. Please check your code!"
-
+        return {'text': "This is an empty message. Something went wrong. Please check your code!"}
 
 @app.before_request
 # Request time measuring
@@ -329,16 +442,51 @@ def api_keywords():
     return jsonify({'keywords': keywords})
 
 
-@app.route('/api/text/generate', methods=['POST'])
-@require_module('text')
+@app.route('/api/prompt', methods=['POST'])
+@require_module('prompt')
 def api_prompt():
+    data = request.get_json()
+
+    if 'text' not in data or not isinstance(data['text'], str):
+        abort(400, '"text" is required')
+
+    keywords = extract_keywords(data['text'])
+
+    if 'name' in data and isinstance(data['name'], str):
+        keywords.insert(0, data['name'])
+
+    prompts = generate_prompt(keywords)
+    return jsonify({'prompts': prompts})
+
+
+
+@app.route('/api/image', methods=['POST'])
+@require_module('sd')
+def api_image():
     data = request.get_json()
 
     if 'prompt' not in data or not isinstance(data['prompt'], str):
         abort(400, '"prompt" is required')
+
+    image = generate_image(data['prompt'])
+    base64image = image_to_base64(image)
+    return jsonify({'image': base64image})
+
+@app.route('/api/text', methods=['POST'])
+@require_module('text')
+def api_text():
+    data = request.get_json()
+    if 'prompt' not in data or not isinstance(data['prompt'], str):
+        abort(400, '"prompt" is required')
+
+    settings = DEFAULT_TEXT_PARAMS.copy()
+
+    if 'settings' in data and isinstance(data['settings'], dict):
+        settings.update(data['settings'])
+    
     prompt = data['prompt']
-    results = generate_text(prompt)
-    return jsonify({'results': results})
+    results = {'results': [generate_text(prompt, settings)]}
+    return jsonify(results)
 
 if args.share:
     from flask_cloudflared import _run_cloudflared
