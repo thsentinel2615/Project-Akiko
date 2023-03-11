@@ -5,10 +5,10 @@ function Chatbox() {
 <div className="message-box">
   <div className="incoming-message">
     <div className="avatar incoming-avatar">
-        <img src='https://i.imgur.com/b5HFKp4.png'/>
+        <img src='https://i.imgur.com/4qixpe4.png'/>
     </div>
     <div className="message-info">
-      <p className="sender-name">Mika</p>
+      <p className="sender-name">Akiko</p>
       <p className="message-text">Placeholder incoming</p>
     </div>
   </div>
