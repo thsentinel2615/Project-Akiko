@@ -10,9 +10,7 @@ function App() {
   return (
     <div className="App">
       <div>
-      <Chatbox/>
-      <ChatboxInput/>
-      <Avatar/>
+      <Chatbox />
       </div>
     </div>
   )
