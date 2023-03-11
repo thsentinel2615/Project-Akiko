@@ -1,23 +1,24 @@
-import { useState } from 'react'
 import './App.css'
-import Chatbox from './assets/components/Chatbox'
-import Avatar from './assets/components/Avatar'
+import { BrowserRouter as Router, Routes, Route}
+    from 'react-router-dom';
 import FrontNav from './assets/components/FrontNav'
 import 'bootstrap/dist/css/bootstrap.min.css';
-
+import Home from './pages'
+import Chat from './pages/chat'
+import Characters from './pages/characters'
+import Settings from './pages/settings'
 function App() {
-  const [count, setCount] = useState(0)
 
   return (
-    <div className="App">
-      <header>
-      <FrontNav/>
-      </header>
-      <body>
-      <Avatar/>
-      <Chatbox />
-      </body>
-    </div>
+      <Router>
+      <FrontNav />
+      <Routes>
+        <Route exact path='/' element={<Home />} />
+        <Route path='/chat' element={<Chat/>} />
+        <Route path='/characters' element={<Characters/>} />
+        <Route path='/settings' element={<Settings/>} />
+      </Routes>
+      </Router>
   )
 }
 
