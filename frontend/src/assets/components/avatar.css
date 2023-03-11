@@ -1,7 +1,8 @@
 #model {
     width: auto;
     height: 840px;
-    position: absolute;
+    position: fixed;
+    bottom: 0;
     right: 200px;
     margin-bottom: 0%;
     z-index: 0;
