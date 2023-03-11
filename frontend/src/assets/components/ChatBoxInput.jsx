@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import './chatboxinput.css'
 const defaultAvatar = 'https://cdn.discordapp.com/attachments/1070388301397250170/1072227534713921616/tmpu7e13o19.png';
 
 export function ChatboxInput({ onSend }) {
@@ -29,7 +28,7 @@ export function ChatboxInput({ onSend }) {
       <div className="send-input">
         <input
           type="file"
-          id='avatar'
+          id='input'
           accept="image/*"
           onChange={handleAvatarChange}
         />

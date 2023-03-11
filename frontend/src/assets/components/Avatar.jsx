@@ -1,5 +1,3 @@
-import './avatar.css'
-
 const Avatar = () => {
   return (
     <div>
