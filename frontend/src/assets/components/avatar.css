@@ -4,5 +4,6 @@
     position: absolute;
     right: 200px;
     top: -70px;
+    z-index: 0;
   }
   
