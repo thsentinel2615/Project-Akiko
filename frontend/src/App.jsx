@@ -1,7 +1,7 @@
 import './App.css'
 import { BrowserRouter as Router, Routes, Route}
     from 'react-router-dom';
-import FrontNav from './assets/components/FrontNav'
+import FrontNav from './assets/components/NavBar'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Home from './pages'
 import Chat from './pages/chat'
