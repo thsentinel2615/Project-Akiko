@@ -93,7 +93,7 @@ body {
 	margin-right: auto;
 	margin-left: 0;
 	margin-top: 30px;
-  }
+}
   
 .chatbox-input-container {
 width: 100%;
@@ -158,11 +158,12 @@ position: left;
 	margin-left: 0;
 	margin-top: 15px;
 }
+
 .send-input {
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
+}
 
 #input,
 #send {
@@ -275,4 +276,8 @@ position: left;
 	border-radius: 10px;
 	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
 	backdrop-filter: blur(10px);
+}
+
+.character-display {
+	display: flex;
 }

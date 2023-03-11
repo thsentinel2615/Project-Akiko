@@ -17,9 +17,9 @@ import base64
 from io import BytesIO
 from random import randint
 from colorama import Fore, Style, init as colorama_init
+from werkzeug.utils import secure_filename
 
 colorama_init()
-
 
 # Constants
 # Also try: 'Qiliang/bart-large-cnn-samsum-ElectrifAi_v10'
@@ -33,7 +33,7 @@ DEFAULT_PROMPT_MODEL = 'FredZhang7/anime-anything-promptgen-v2'
 DEFAULT_TEXT_MODEL = 'PygmalionAI/pygmalion-6b'
 DEFAULT_SD_MODEL = "ckpt/anything-v4.5-vae-swapped"
 
-#ALL_MODULES = ['caption', 'summarize', 'classify', 'keywords', 'prompt', 'sd']
+#ALL_MODULES = ['caption', 'summarize', 'classify', 'keywords', 'prompt', 'text', 'sd']
 DEFAULT_SUMMARIZE_PARAMS = {
     'temperature': 1.0,
     'repetition_penalty': 1.0,
@@ -183,9 +183,19 @@ indicator_list = ['female', 'girl', 'male', 'boy', 'woman', 'man', 'hair', 'eyes
 app = Flask(__name__)
 CORS(app) # allow cross-domain requests
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
+# Folder Locations
+app.config['CHARACTER_FOLDER'] = '../shared_data/character_info/'
+app.config['CHARACTER_IMAGES_FOLDER'] = '../shared_data/character_images/'
+app.config['DEBUG'] = False
+app.config['PROPAGATE_EXCEPTIONS'] = False
 
 extensions = []
 
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def require_module(name):
     def wrapper(fn):
@@ -380,6 +390,9 @@ def get_asset(name: str, asset: str):
         abort(404)
     return send_from_directory(os.path.join('./extensions', extension[0]['name'], 'assets'), asset)
 
+@app.errorhandler(400)
+def handle_bad_request(e):
+    return jsonify(error=str(e)), 400
 
 @app.route('/api/caption', methods=['POST'])
 @require_module('caption')
@@ -488,6 +501,49 @@ def api_text():
     prompt = data['prompt']
     results = {'results': [generate_text(prompt, settings)]}
     return jsonify(results)
+
+@app.route('/api/characters', methods=['POST'])
+def add_character():
+    # Get the character information from the request
+    char_id = request.form.get('char_id')
+    name = request.form.get('name')
+    description = request.form.get('description')
+    scenario = request.form.get('scenario')
+    greeting = request.form.get('greeting')
+    examples = request.form.get('examples')
+    avatar = request.files['avatar']
+
+    # Check if a file was uploaded and if it's allowed
+    if avatar and allowed_file(avatar.filename):
+        # Save the file with a secure filename
+        filename = secure_filename(name + '.png')
+        avatar.save(os.path.join(app.config['CHARACTER_IMAGES_FOLDER'], filename))
+
+        # Add the file path to the character information
+        avatar = filename
+
+
+    # Save the character information to a JSON file
+    character = {
+        'char_id': char_id,
+        'char_name': name,
+        'char_persona': description,
+        'world_scenario': scenario,
+        'char_greeting': greeting,
+        'example_dialogue': examples,
+        'avatar': avatar
+    }
+    with open(app.config['CHARACTER_FOLDER']+name+'.json', 'a') as f:
+        f.write(json.dumps(character))
+
+    return jsonify({'message': 'Character added successfully', 'avatar': avatar})
+
+@app.route('/api/characters/images/<filename>', methods=['GET'])
+def get_avatar_image(filename):
+    try:
+        return send_from_directory(app.config['CHARACTER_IMAGES_FOLDER'], filename, as_attachment=True)
+    except FileNotFoundError:
+        abort(404)
 
 if args.share:
     from flask_cloudflared import _run_cloudflared

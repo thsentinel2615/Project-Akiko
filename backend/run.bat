@@ -1,2 +1,2 @@
-python server.py --enable-modules text
+python server.py
 pause

@@ -32,7 +32,7 @@ export function ChatboxInput({ onSend }) {
           accept="image/*"
           onChange={handleAvatarChange}
         />
-        <img src={avatar || defaultAvatar} alt="avatar" className="avatar incoming-avatar" />
+        <img src={avatar || defaultAvatar} alt="avatar" className="incoming-avatar" />
         <input
           type="text"
           id='input'

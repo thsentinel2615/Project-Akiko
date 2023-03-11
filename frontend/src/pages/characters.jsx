@@ -4,7 +4,26 @@ const Characters = () => {
 const [characters, setCharacters] = useState([]);
 
   function addCharacter(newCharacter) {
-    setCharacters([...characters, { ...newCharacter, id: Date.now(), avatar: URL.createObjectURL(newCharacter.avatar) }]);
+    const formData = new FormData();
+    formData.append('char_id', newCharacter.char_id);
+    formData.append('name', newCharacter.name);
+    formData.append('description', newCharacter.description);
+    formData.append('scenario', newCharacter.scenario);
+    formData.append('greeting', newCharacter.greeting);
+    formData.append('examples', newCharacter.examples);
+    formData.append('avatar', newCharacter.avatar);
+
+    fetch('http://localhost:5100/api/characters', {
+      method: 'POST',
+      body: formData
+    })
+      .then(response => response.json())
+      .then(data => {
+        setCharacters([...characters, {...newCharacter, avatar: data.avatar}]);
+      })
+      .catch(error => {
+        console.error(error);
+      });
   }
 
   function CharacterForm({ onCharacterSubmit }) {
@@ -13,12 +32,13 @@ const [characters, setCharacters] = useState([]);
     const [characterScenario, setCharacterScenario] = useState('');
     const [characterGreeting, setCharacterGreeting] = useState('');
     const [characterExamples, setCharacterExamples] = useState('');
-    const [characterAvatar, setCharacterAvatar] = useState('');
+    const [characterAvatar, setCharacterAvatar] = useState(null);
 
     function handleSubmit(event) {
       event.preventDefault();
   
       const newCharacter = {
+        char_id: Date.now(),
         name: characterName,
         description: characterDescription,
         scenario: characterScenario,
@@ -91,20 +111,21 @@ const [characters, setCharacters] = useState([]);
   }
       
 return (
-    <div>
+  <div>
     <CharacterForm onCharacterSubmit={addCharacter} />
-    <ul>
+    <div className="character-display">
       {characters.map((character) => (
-        <li key={character.id} className="character-info-box">
+        <div key={character.char_id} className="character-info-box">
           <h2><b>{character.name}</b></h2>
-          <img src={character.avatar} alt={character.name} id="character-avatar"/>
+          {console.log(character.avatar)}
+          {character.avatar && <img src={'http://localhost:5100/api/characters/images/'+character.avatar} alt={character.name} id="character-avatar"/>}
           <p>{character.description}</p>
           {/* Other character information */}
-        </li>
+        </div>
       ))}
-    </ul>
+    </div>
   </div>
-);
+);  
 };
 
 export default Characters;
