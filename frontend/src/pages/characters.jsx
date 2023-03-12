@@ -1,30 +1,15 @@
 import React, { useState } from "react";
+import socketIOClient from 'socket.io-client';
+
+const socket = socketIOClient('http://localhost:5100');
 
 const Characters = () => {
-const [characters, setCharacters] = useState([]);
-
-  function addCharacter(newCharacter) {
-    const formData = new FormData();
-    formData.append('char_id', newCharacter.char_id);
-    formData.append('name', newCharacter.name);
-    formData.append('description', newCharacter.description);
-    formData.append('scenario', newCharacter.scenario);
-    formData.append('greeting', newCharacter.greeting);
-    formData.append('examples', newCharacter.examples);
-    formData.append('avatar', newCharacter.avatar);
-
-    fetch('http://localhost:5100/api/characters', {
-      method: 'POST',
-      body: formData
-    })
-      .then(response => response.json())
-      .then(data => {
-        setCharacters([...characters, {...newCharacter, avatar: data.avatar}]);
-      })
-      .catch(error => {
-        console.error(error);
-      });
-  }
+  const [characters, setCharacters] = useState([]);
+  useEffect(() => {
+    socket.on('update_characters', (data) => {
+      setCharacters(data);
+    });
+  }, []);
 
   function CharacterForm({ onCharacterSubmit }) {
     const [characterName, setCharacterName] = useState('');
@@ -34,30 +19,31 @@ const [characters, setCharacters] = useState([]);
     const [characterExamples, setCharacterExamples] = useState('');
     const [characterAvatar, setCharacterAvatar] = useState(null);
 
-    function handleSubmit(event) {
-      event.preventDefault();
+  function handleSubmit(event) {
+    event.preventDefault();
   
-      const newCharacter = {
-        char_id: Date.now(),
-        name: characterName,
-        description: characterDescription,
-        scenario: characterScenario,
-        greeting: characterGreeting,
-        examples: characterExamples,
-        avatar: characterAvatar
-        // Other form input values
-      };
+    const newCharacter = {
+      char_id: Date.now(),
+      name: characterName,
+      description: characterDescription,
+      scenario: characterScenario,
+      greeting: characterGreeting,
+      examples: characterExamples,
+      avatar: characterAvatar,
+      // Other form input values
+    };
   
-      onCharacterSubmit(newCharacter);
+    // Emit a socket event with the new character data
+    socket.emit('add_character', newCharacter);
   
-      // Reset form input values
-      setCharacterName('');
-      setCharacterDescription('');
-      setCharacterScenario('');
-      setCharacterGreeting('');
-      setCharacterExamples('');
-      setCharacterAvatar(null);
-      // Reset other input field state variables
+    // Reset form input values
+    setCharacterName('');
+    setCharacterDescription('');
+    setCharacterScenario('');
+    setCharacterGreeting('');
+    setCharacterExamples('');
+    setCharacterAvatar(null);
+    // Reset other input field state variables
     }
     return (
     <div className="character-form">
