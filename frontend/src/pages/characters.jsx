@@ -1,7 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { io } from 'socket.io-client';
 
 const Characters = () => {
 const [characters, setCharacters] = useState([]);
+const socket = io('http://localhost:5100');
+
+socket.on('connect', () => {
+  console.log('Connected to server');
+});
+
+socket.on('disconnect', () => {
+  console.log('Disconnected from server');
+});
 
   function addCharacter(newCharacter) {
     const formData = new FormData();
@@ -36,7 +46,7 @@ const [characters, setCharacters] = useState([]);
 
     function handleSubmit(event) {
       event.preventDefault();
-  
+
       const newCharacter = {
         char_id: Date.now(),
         name: characterName,
@@ -44,12 +54,17 @@ const [characters, setCharacters] = useState([]);
         scenario: characterScenario,
         greeting: characterGreeting,
         examples: characterExamples,
-        avatar: characterAvatar
+        avatar: characterAvatar,
         // Other form input values
       };
-  
+      
       onCharacterSubmit(newCharacter);
-  
+      // Emit a socket event with the new character data
+      socket.emit('add_character', newCharacter);
+      
+      socket.on('characters_updated', (data) => {
+        console.log(data.message);
+      });
       // Reset form input values
       setCharacterName('');
       setCharacterDescription('');
