@@ -96,8 +96,6 @@ summarization_model = args.summarization_model if args.summarization_model else 
 classification_model = args.classification_model if args.classification_model else DEFAULT_CLASSIFICATION_MODEL
 captioning_model = args.captioning_model if args.captioning_model else DEFAULT_CAPTIONING_MODEL
 keyphrase_model = args.keyphrase_model if args.keyphrase_model else DEFAULT_KEYPHRASE_MODEL
-prompt_model = args.prompt_model if args.prompt_model else DEFAULT_PROMPT_MODEL
-sd_model = args.sd_model if args.sd_model else DEFAULT_SD_MODEL
 text_model = args.text_model if args.text_model else DEFAULT_TEXT_MODEL
 modules = args.enable_modules if args.enable_modules and len(args.enable_modules) > 0 else []
 
