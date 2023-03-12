@@ -1,7 +1,6 @@
 from functools import wraps
 from flask import Flask, jsonify, request, render_template_string, abort, send_from_directory
 from flask_cors import CORS
-from flask_socketio import SocketIO,emit
 import markdown
 import argparse
 from transformers import AutoTokenizer, AutoProcessor, pipeline
@@ -182,8 +181,6 @@ indicator_list = ['female', 'girl', 'male', 'boy', 'woman', 'man', 'hair', 'eyes
 
 # Flask init
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
 CORS(app) # allow cross-domain requests
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 # Folder Locations
@@ -353,9 +350,6 @@ def before_request():
 def after_request(response):
     duration = time.time() - request.start_time
     response.headers['X-Request-Duration'] = str(duration)
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
     return response
 
 
@@ -508,23 +502,26 @@ def api_text():
     results = {'results': [generate_text(prompt, settings)]}
     return jsonify(results)
 
-@socketio.on('add_character')
-def add_character(data):
-    char_id = data['char_id']
-    name = data['name']
-    description = data['description']
-    scenario = data['scenario']
-    greeting = data['greeting']
-    examples = data['examples']
-    avatar = data['avatar']
+@app.route('/api/characters', methods=['POST'])
+def add_character():
+    # Get the character information from the request
+    char_id = request.form.get('char_id')
+    name = request.form.get('name')
+    description = request.form.get('description')
+    scenario = request.form.get('scenario')
+    greeting = request.form.get('greeting')
+    examples = request.form.get('examples')
+    avatar = request.files['avatar']
 
-    if avatar:
+    # Check if a file was uploaded and if it's allowed
+    if avatar and allowed_file(avatar.filename):
         # Save the file with a secure filename
         filename = secure_filename(name + '.png')
         avatar.save(os.path.join(app.config['CHARACTER_IMAGES_FOLDER'], filename))
 
         # Add the file path to the character information
         avatar = filename
+
 
     # Save the character information to a JSON file
     character = {
@@ -539,8 +536,7 @@ def add_character(data):
     with open(app.config['CHARACTER_FOLDER']+name+'.json', 'a') as f:
         f.write(json.dumps(character))
 
-    # Emit the new character data to all the clients
-    socketio.emit('update_characters', character, namespace='/characters')
+    return jsonify({'message': 'Character added successfully', 'avatar': avatar})
 
 @app.route('/api/characters/images/<filename>', methods=['GET'])
 def get_avatar_image(filename):

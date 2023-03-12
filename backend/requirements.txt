@@ -1,7 +1,6 @@
 flask
 flask-cloudflared
 flask-cors
-flask-socketio
 markdown
 Pillow
 colorama
