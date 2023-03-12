@@ -1,6 +1,0 @@
-{
-    "display_name": "Floating Prompt",
-    "requires": [],
-    "js": "index.js",
-    "css": "style.css"
-}

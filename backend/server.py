@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import Flask, jsonify, request, render_template_string, abort, send_from_directory
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 import markdown
 import argparse
 from transformers import AutoTokenizer, AutoProcessor, pipeline
@@ -29,9 +30,7 @@ DEFAULT_CLASSIFICATION_MODEL = 'bhadresh-savani/distilbert-base-uncased-emotion'
 # Also try: 'Salesforce/blip-image-captioning-base' or 'microsoft/git-large-r-textcaps'
 DEFAULT_CAPTIONING_MODEL = 'Salesforce/blip-image-captioning-large'
 DEFAULT_KEYPHRASE_MODEL = 'ml6team/keyphrase-extraction-distilbert-inspec'
-DEFAULT_PROMPT_MODEL = 'FredZhang7/anime-anything-promptgen-v2'
 DEFAULT_TEXT_MODEL = 'PygmalionAI/pygmalion-6b'
-DEFAULT_SD_MODEL = "ckpt/anything-v4.5-vae-swapped"
 
 #ALL_MODULES = ['caption', 'summarize', 'classify', 'keywords', 'prompt', 'text', 'sd']
 DEFAULT_SUMMARIZE_PARAMS = {
@@ -82,10 +81,6 @@ parser.add_argument('--captioning-model',
                     help="Load a custom captioning model")
 parser.add_argument('--keyphrase-model',
                     help="Load a custom keyphrase extraction model")
-parser.add_argument('--prompt-model',
-                    help="Load a custom prompt generation model")
-parser.add_argument('--sd-model',
-                    help="Load a custom SD image generation model")
 parser.add_argument('--sd-cpu',
                     help="Force the SD pipeline to run on the CPU")
 parser.add_argument('--text-model',
@@ -137,51 +132,15 @@ if 'keywords' in modules:
     import pipelines as pipelines
     keyphrase_pipe = pipelines.KeyphraseExtractionPipeline(keyphrase_model)
 
-if 'prompt' in modules:
-    print('Initializing a prompt generator')
-    gpt_tokenizer = GPT2Tokenizer.from_pretrained('distilgpt2')
-    gpt_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-    gpt_model = AutoModelForCausalLM.from_pretrained(prompt_model)
-    prompt_generator = pipeline('text-generation', model=gpt_model, tokenizer=gpt_tokenizer)
-
-if 'sd' in modules:
-    from diffusers import StableDiffusionPipeline
-    from diffusers import EulerAncestralDiscreteScheduler
-    print('Initializing Stable Diffusion pipeline')
-    sd_device_string = "cuda" if torch.cuda.is_available() and not args.sd_cpu else "cpu"
-    sd_device = torch.device(sd_device_string)
-    sd_torch_dtype = torch.float32 if sd_device_string == "cpu" else torch.float16
-    sd_pipe = StableDiffusionPipeline.from_pretrained(sd_model, custom_pipeline="lpw_stable_diffusion", torch_dtype=sd_torch_dtype).to(sd_device)
-    sd_pipe.safety_checker = lambda images, clip_input: (images, False)
-    sd_pipe.enable_attention_slicing()
-    # pipe.scheduler = KarrasVeScheduler.from_config(pipe.scheduler.config)
-    sd_pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(sd_pipe.scheduler.config)
-
 if 'text' in modules:
     print('Initializing a text generator')
     text_tokenizer = AutoTokenizer.from_pretrained(text_model)
     text_transformer = AutoModelForCausalLM.from_pretrained(text_model, torch_dtype=torch.float16).to(device)
 
-prompt_prefix = "best quality, absurdres, "
-neg_prompt = """lowres, bad anatomy, error body, error hair, error arm,
-error hands, bad hands, error fingers, bad fingers, missing fingers
-error legs, bad legs, multiple legs, missing legs, error lighting,
-error shadow, error reflection, text, error, extra digit, fewer digits,
-cropped, worst quality, low quality, normal quality, jpeg artifacts,
-signature, watermark, username, blurry"""
-
-
-# list of key phrases to be looking for in text (unused for now)
-indicator_list = ['female', 'girl', 'male', 'boy', 'woman', 'man', 'hair', 'eyes', 'skin', 'wears',
-                  'appearance', 'costume', 'clothes', 'body', 'tall', 'short', 'chubby', 'thin',
-                  'expression', 'angry', 'sad', 'blush', 'smile', 'happy', 'depressed', 'long',
-                  'cold', 'breasts', 'chest', 'tail', 'ears', 'fur', 'race', 'species', 'wearing',
-                  'shoes', 'boots', 'shirt', 'panties', 'bra', 'skirt', 'dress', 'kimono', 'wings', 'horns',
-                  'pants', 'shorts', 'leggins', 'sandals', 'hat', 'glasses', 'sweater', 'hoodie', 'sweatshirt']
-
 # Flask init
 app = Flask(__name__)
 CORS(app) # allow cross-domain requests
+socketio = SocketIO(app)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 # Folder Locations
 app.config['CHARACTER_FOLDER'] = '../shared_data/character_info/'
@@ -189,9 +148,19 @@ app.config['CHARACTER_IMAGES_FOLDER'] = '../shared_data/character_images/'
 app.config['DEBUG'] = False
 app.config['PROPAGATE_EXCEPTIONS'] = False
 
+socketio = SocketIO(cors_allowed_origins="*")
+
 extensions = []
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -271,35 +240,6 @@ def extract_keywords(text: str) -> list:
     text = normalize_string(text)
     return list(keyphrase_pipe(text))
 
-
-def generate_prompt(keywords: list, length: int = 100, num: int = 4) -> str:
-    prompt = ', '.join(keywords)
-    outs = prompt_generator(prompt, max_length=length, num_return_sequences=num, do_sample=True,
-                            repetition_penalty=1.2, temperature=0.7, top_k=4, early_stopping=True)
-    return [out['generated_text'] for out in outs]
-
-
-def generate_image(input: str, steps: int = 30, scale: int = 6) -> Image:
-    prompt = normalize_string(f'{prompt_prefix}{input}')
-    print(prompt)
-
-    image = sd_pipe(
-        prompt=prompt,
-        negative_prompt=neg_prompt,
-        num_inference_steps=steps,
-        guidance_scale=scale,
-    ).images[0]
-
-    image.save("./debug.png")
-    return image
-
-
-def image_to_base64(image: Image):
-    buffered = BytesIO()
-    image.save(buffered, format="JPEG")
-    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8") 
-    return img_str
-
 def generate_text(prompt: str, settings: dict) -> str:
     input_ids = text_tokenizer.encode(prompt, return_tensors="pt").to(device)
     attention_mask = torch.ones_like(input_ids)
@@ -358,37 +298,6 @@ def index():
     with open('./README.md', 'r') as f:
         content = f.read()
     return render_template_string(markdown.markdown(content, extensions=['tables']))
-
-
-@app.route('/api/extensions', methods=['GET'])
-def get_extensions():
-    return jsonify({'extensions': extensions})
-
-
-@app.route('/api/script/<name>', methods=['GET'])
-def get_script(name: str):
-    extension = [element for element in extensions if element['name'] == name]
-    if len(extension) == 0:
-        abort(404)
-    return send_from_directory(os.path.join('./extensions/', extension[0]['name']),  extension[0]['metadata']['js'])
-    
-
-@app.route('/api/style/<name>', methods=['GET'])
-def get_style(name: str):
-    extension = [element for element in extensions if element['name'] == name]
-    if len(extension) == 0:
-        abort(404)
-    return send_from_directory(os.path.join('./extensions/', extension[0]['name']),  extension[0]['metadata']['css'])
-
-
-@app.route('/api/asset/<name>/<asset>', methods=['GET'])
-def get_asset(name: str, asset: str):
-    extension = [element for element in extensions if element['name'] == name]
-    if len(extension) == 0:
-        abort(404)
-    if asset not in extension[0]['metadata']['assets']:
-        abort(404)
-    return send_from_directory(os.path.join('./extensions', extension[0]['name'], 'assets'), asset)
 
 @app.errorhandler(400)
 def handle_bad_request(e):
@@ -456,36 +365,6 @@ def api_keywords():
     return jsonify({'keywords': keywords})
 
 
-@app.route('/api/prompt', methods=['POST'])
-@require_module('prompt')
-def api_prompt():
-    data = request.get_json()
-
-    if 'text' not in data or not isinstance(data['text'], str):
-        abort(400, '"text" is required')
-
-    keywords = extract_keywords(data['text'])
-
-    if 'name' in data and isinstance(data['name'], str):
-        keywords.insert(0, data['name'])
-
-    prompts = generate_prompt(keywords)
-    return jsonify({'prompts': prompts})
-
-
-
-@app.route('/api/image', methods=['POST'])
-@require_module('sd')
-def api_image():
-    data = request.get_json()
-
-    if 'prompt' not in data or not isinstance(data['prompt'], str):
-        abort(400, '"prompt" is required')
-
-    image = generate_image(data['prompt'])
-    base64image = image_to_base64(image)
-    return jsonify({'image': base64image})
-
 @app.route('/api/text', methods=['POST'])
 @require_module('text')
 def api_text():
@@ -502,26 +381,31 @@ def api_text():
     results = {'results': [generate_text(prompt, settings)]}
     return jsonify(results)
 
-@app.route('/api/characters', methods=['POST'])
-def add_character():
-    # Get the character information from the request
-    char_id = request.form.get('char_id')
-    name = request.form.get('name')
-    description = request.form.get('description')
-    scenario = request.form.get('scenario')
-    greeting = request.form.get('greeting')
-    examples = request.form.get('examples')
-    avatar = request.files['avatar']
 
-    # Check if a file was uploaded and if it's allowed
-    if avatar and allowed_file(avatar.filename):
+@app.route('/api/characters/images/<filename>', methods=['GET'])
+def get_avatar_image(filename):
+    try:
+        return send_from_directory(app.config['CHARACTER_IMAGES_FOLDER'], filename, as_attachment=True)
+    except FileNotFoundError:
+        abort(404)
+
+@socketio.on('add_character')
+def add_character(data):
+    char_id = data['char_id']
+    name = data['name']
+    description = data['description']
+    scenario = data['scenario']
+    greeting = data['greeting']
+    examples = data['examples']
+    avatar = data['avatar']
+
+    if avatar:
         # Save the file with a secure filename
         filename = secure_filename(name + '.png')
         avatar.save(os.path.join(app.config['CHARACTER_IMAGES_FOLDER'], filename))
 
         # Add the file path to the character information
         avatar = filename
-
 
     # Save the character information to a JSON file
     character = {
@@ -536,14 +420,8 @@ def add_character():
     with open(app.config['CHARACTER_FOLDER']+name+'.json', 'a') as f:
         f.write(json.dumps(character))
 
-    return jsonify({'message': 'Character added successfully', 'avatar': avatar})
-
-@app.route('/api/characters/images/<filename>', methods=['GET'])
-def get_avatar_image(filename):
-    try:
-        return send_from_directory(app.config['CHARACTER_IMAGES_FOLDER'], filename, as_attachment=True)
-    except FileNotFoundError:
-        abort(404)
+    # Emit the new character data to all the clients
+    socketio.emit('characters_updated', {'message': 'Character added'}, broadcast=True)
 
 if args.share:
     from flask_cloudflared import _run_cloudflared
