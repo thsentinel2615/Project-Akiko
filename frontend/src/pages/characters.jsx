@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { fetchCharacters, createCharacter, getCharacterImageUrl } from "../assets/components/api";
 
 const Characters = () => {
-const [characters, setCharacters] = useState([]);
+  const [characters, setCharacters] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5100/api/characters')
-      .then(response => response.json())
+    fetchCharacters()
       .then(data => setCharacters(data))
       .catch(error => {
         console.error(error);
@@ -14,22 +14,9 @@ const [characters, setCharacters] = useState([]);
   }, []);
 
   function addCharacter(newCharacter) {
-    const formData = new FormData();
-    formData.append('char_id', newCharacter.char_id);
-    formData.append('char_name', newCharacter.char_name);
-    formData.append('char_persona', newCharacter.char_persona);
-    formData.append('world_scenario', newCharacter.world_scenario);
-    formData.append('char_greeting', newCharacter.char_greeting);
-    formData.append('example_dialogue', newCharacter.example_dialogue);
-    formData.append('avatar', newCharacter.avatar);
-
-    fetch('http://localhost:5100/api/characters', {
-      method: 'POST',
-      body: formData
-    })
-      .then(response => response.json())
-      .then(data => {
-        setCharacters([...characters, {...newCharacter, avatar: data.avatar}]);
+    createCharacter(newCharacter)
+      .then(avatar => {
+        setCharacters([...characters, {...newCharacter, avatar: avatar}]);
       })
       .catch(error => {
         console.error(error);
@@ -48,13 +35,18 @@ const [characters, setCharacters] = useState([]);
     function handleSubmit(event) {
       event.preventDefault();
 
+      if (!characterName) {
+        alert("Please enter a name for your character.");
+        return;
+      }
+      
       const newCharacter = {
         char_id: Date.now(),
-        char_name: characterName,
-        char_persona: characterDescription,
-        world_scenario: characterScenario,
-        char_greeting: characterGreeting,
-        example_dialogue: characterExamples,
+        char_name: characterName || "Default Name",
+        char_persona: characterDescription || "",
+        world_scenario: characterScenario || "",
+        char_greeting: characterGreeting || "",
+        example_dialogue: characterExamples || "",
         avatar: characterAvatar,
         // Other form input values
       };
@@ -128,7 +120,7 @@ return (
       {characters.map((character) => (
         <div key={character.char_id} className="character-info-box">
           <h2><b>{character.char_name}</b></h2>
-          {character.avatar && <img src={'http://localhost:5100/api/characters/images/'+character.avatar} alt={character.char_name} id="character-avatar"/>}
+          {character.avatar && <img src={getCharacterImageUrl(character.avatar)} alt={character.char_name} id="character-avatar"/>}
           <p>{character.char_persona}</p>
           {/* Other character information */}
         </div>
