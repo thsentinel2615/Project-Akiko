@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { io } from 'socket.io-client';
 
 const Characters = () => {
 const [characters, setCharacters] = useState([]);
-const socket = io('http://localhost:5100');
 
-socket.on('connect', () => {
-  console.log('Connected to server');
-});
-
-socket.on('disconnect', () => {
-  console.log('Disconnected from server');
-});
+  useEffect(() => {
+    fetch('http://localhost:5100/api/characters')
+      .then(response => response.json())
+      .then(data => setCharacters(data))
+      .catch(error => {
+        console.error(error);
+        history.push('/error');
+      });
+  }, []);
 
   function addCharacter(newCharacter) {
     const formData = new FormData();
     formData.append('char_id', newCharacter.char_id);
-    formData.append('name', newCharacter.name);
-    formData.append('description', newCharacter.description);
-    formData.append('scenario', newCharacter.scenario);
-    formData.append('greeting', newCharacter.greeting);
-    formData.append('examples', newCharacter.examples);
+    formData.append('char_name', newCharacter.char_name);
+    formData.append('char_persona', newCharacter.char_persona);
+    formData.append('world_scenario', newCharacter.world_scenario);
+    formData.append('char_greeting', newCharacter.char_greeting);
+    formData.append('example_dialogue', newCharacter.example_dialogue);
     formData.append('avatar', newCharacter.avatar);
 
     fetch('http://localhost:5100/api/characters', {
@@ -33,6 +33,7 @@ socket.on('disconnect', () => {
       })
       .catch(error => {
         console.error(error);
+        history.push('/error');
       });
   }
 
@@ -49,22 +50,17 @@ socket.on('disconnect', () => {
 
       const newCharacter = {
         char_id: Date.now(),
-        name: characterName,
-        description: characterDescription,
-        scenario: characterScenario,
-        greeting: characterGreeting,
-        examples: characterExamples,
+        char_name: characterName,
+        char_persona: characterDescription,
+        world_scenario: characterScenario,
+        char_greeting: characterGreeting,
+        example_dialogue: characterExamples,
         avatar: characterAvatar,
         // Other form input values
       };
       
       onCharacterSubmit(newCharacter);
       // Emit a socket event with the new character data
-      socket.emit('add_character', newCharacter);
-      
-      socket.on('characters_updated', (data) => {
-        console.log(data.message);
-      });
       // Reset form input values
       setCharacterName('');
       setCharacterDescription('');
@@ -131,10 +127,9 @@ return (
     <div className="character-display">
       {characters.map((character) => (
         <div key={character.char_id} className="character-info-box">
-          <h2><b>{character.name}</b></h2>
-          {console.log(character.avatar)}
-          {character.avatar && <img src={'http://localhost:5100/api/characters/images/'+character.avatar} alt={character.name} id="character-avatar"/>}
-          <p>{character.description}</p>
+          <h2><b>{character.char_name}</b></h2>
+          {character.avatar && <img src={'http://localhost:5100/api/characters/images/'+character.avatar} alt={character.char_name} id="character-avatar"/>}
+          <p>{character.char_persona}</p>
           {/* Other character information */}
         </div>
       ))}
