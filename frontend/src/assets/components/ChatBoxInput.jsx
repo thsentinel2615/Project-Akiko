@@ -1,55 +1,60 @@
 import React, { useState } from 'react';
-const defaultAvatar = 'https://cdn.discordapp.com/attachments/1070388301397250170/1072227534713921616/tmpu7e13o19.png';
+import { FiUsers, FiSliders } from 'react-icons/fi';
+import { HiOutlinePaperAirplane } from 'react-icons/hi2';
+import AvatarChatPreview from './menucomponents/AvatarChatPreview';
+import Modal from './menucomponents/Modal'
 
-export function ChatboxInput({ onSend }) {
+
+const ChatboxInput = ({ onSend }) => {
   const [text, setText] = useState('');
-  const [sender, setSender] = useState('');
-  const [avatar, setAvatar] = useState('');
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const handleTextChange = (event) => {
     setText(event.target.value);
   };
 
-  const handleSenderChange = (event) => {
-    setSender(event.target.value);
-  };
-
-  const handleAvatarChange = (event) => {
-    setAvatar(URL.createObjectURL(event.target.files[0]));
-  };
-
   const handleSendClick = () => {
-    onSend(sender || 'You', text, avatar);
+    onSend('You', text);
     setText('');
   };
+
+  const handleProfileClose = () => {
+    setIsProfileOpen(false);
+  };
+
+  const handleProfileOpen = () => {
+    setIsProfileOpen(true);
+  };
+
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className='inputBox'>
       <div className="send-input">
-        <input
-          type="file"
-          id='input'
-          accept="image/*"
-          onChange={handleAvatarChange}
-        />
-        <img src={avatar || defaultAvatar} alt="avatar" className="incoming-avatar" />
-        <input
-          type="text"
-          id='input'
-          value={sender}
-          placeholder="Your name"
-          onChange={handleSenderChange}
-        />
+        <div id='FiMenu' onClick={() => setIsOpen(true)}>
+          <FiUsers />
+        </div>
+        <div id='FiSliders'><FiSliders/></div>
         <input
           type="text"
           id='input' 
+          autoComplete='off'
           value={text}
           placeholder="Type your message..."
           onChange={handleTextChange}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSendClick();
+            }
+          }}
         />
-        <button onClick={handleSendClick} id='send'>Send</button>
+        <div onClick={handleSendClick} id='send'><HiOutlinePaperAirplane/></div>
       </div>
+        <Modal handleClose={() => setIsOpen(false)} isOpen={isOpen}>
+          This is Modal Content!
+        </Modal>
     </div>
   );
 }
+
 export default ChatboxInput;
