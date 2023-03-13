@@ -267,6 +267,7 @@ position: left;
   box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
   padding: 20px;
+  overflow-y: scroll;
 }
 
 #model {
@@ -290,6 +291,8 @@ position: left;
 	width: 350px;
 	border-radius: 10%;
 	overflow: hidden;
+	margin-right: auto;
+	margin-left: auto;
 }
 
 .character-display {
@@ -348,6 +351,7 @@ position: left;
 	align-items: center;
 	justify-content: center;
 	z-index: 9999; /* make sure the modal is on top of other content */
+	overflow-y: scroll;
 }
 
 .close {

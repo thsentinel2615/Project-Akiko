@@ -143,7 +143,7 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 # Folder Locations
 app.config['CHARACTER_FOLDER'] = '../shared_data/character_info/'
 app.config['CHARACTER_IMAGES_FOLDER'] = '../shared_data/character_images/'
-app.config['DEBUG'] = False
+app.config['DEBUG'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = False
 
 socketio = SocketIO(cors_allowed_origins="*")
@@ -441,6 +441,41 @@ def delete_character(char_id):
         return jsonify({'error': 'Character not found'}), 404
     return jsonify({'message': 'Character deleted successfully'})
 
+@app.route('/api/characters/<int:char_id>', methods=['PUT'])
+def update_character(char_id):
+    # Get the character information from the request
+    name = request.form.get('char_name')
+    description = request.form.get('char_persona')
+    scenario = request.form.get('world_scenario')
+    greeting = request.form.get('char_greeting')
+    examples = request.form.get('example_dialogue')
+    avatar = request.files.get('avatar')
+    # Check if a file was uploaded and if it's allowed
+    if avatar and allowed_file(avatar.filename):
+        # Save the file with a secure filename
+        filename = secure_filename(str(char_id) + '.png')
+        avatar.save(os.path.join(app.config['CHARACTER_IMAGES_FOLDER'], filename))
+        # Add the file path to the character information
+        avatar = filename
+    # Load the existing character information from the JSON file
+    character_path = app.config['CHARACTER_FOLDER'] + str(char_id) + '.json'
+    try:
+        with open(character_path, 'r') as f:
+            character = json.load(f)
+    except FileNotFoundError:
+        return jsonify({'error': 'Character not found'}), 404
+    # Update the character information
+    character['char_name'] = name
+    character['char_persona'] = description
+    character['world_scenario'] = scenario
+    character['char_greeting'] = greeting
+    character['example_dialogue'] = examples
+    if avatar:
+        character['avatar'] = avatar
+    # Save the updated character information to the JSON file
+    with open(character_path, 'w') as f:
+        json.dump(character, f)
+    return jsonify({'message': 'Character updated successfully'})
 
 @socketio.on('add_character')
 def add_character(data):

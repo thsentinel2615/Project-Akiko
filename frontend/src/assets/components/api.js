@@ -36,3 +36,22 @@ export async function deleteCharacter(charId) {
   const data = await response.json();
   return data;
 }
+
+export async function updateCharacter(updatedCharacter) {
+  const formData = new FormData();
+  formData.append('char_id', updatedCharacter.char_id);
+  formData.append('char_name', updatedCharacter.char_name);
+  formData.append('char_persona', updatedCharacter.char_persona);
+  formData.append('world_scenario', updatedCharacter.world_scenario);
+  formData.append('char_greeting', updatedCharacter.char_greeting);
+  formData.append('example_dialogue', updatedCharacter.example_dialogue);
+  formData.append('avatar', updatedCharacter.avatar);
+
+  const response = await fetch(`${API_URL}/characters/${updatedCharacter.char_id}`, {
+    method: 'PUT',
+    body: formData
+  });
+
+  const data = await response.json();
+  return data;
+}

@@ -7,6 +7,7 @@ const [characterScenario, setCharacterScenario] = useState('');
 const [characterGreeting, setCharacterGreeting] = useState('');
 const [characterExamples, setCharacterExamples] = useState('');
 const [characterAvatar, setCharacterAvatar] = useState(null);
+const [imageUrl, setImageUrl] = useState(null);
 
 function handleSubmit(event) {
     event.preventDefault();
@@ -29,9 +30,17 @@ function handleSubmit(event) {
     setCharacterGreeting('');
     setCharacterExamples('');
     setCharacterAvatar(null);
+    setImageUrl(null);
     onClose();
   };
 
+  function handleImageChange(event) {
+    const file = event.target.files[0];
+    if (file) {
+      setCharacterAvatar(file);
+      setImageUrl(URL.createObjectURL(file));
+    }
+  }
   return (
     <div className="modal-overlay">
       <div className="character-form">
@@ -39,6 +48,7 @@ function handleSubmit(event) {
         <h2>Create New Character</h2>
         <form onSubmit={handleSubmit}>
           <div className="character-input">
+            {imageUrl && <img src={imageUrl} alt="avatar" id="character-avatar"/>}
             <label htmlFor="characterName"><b>Name:</b></label>
             <textarea
               id="character-field"
@@ -76,7 +86,7 @@ function handleSubmit(event) {
               type="file"
               name="characterAvatar"
               accept="image/*"
-              onChange={(event) => setCharacterAvatar(event.target.files[0])}
+              onChange={handleImageChange}
               required
             />
             <button type="submit" id="character-button">
