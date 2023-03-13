@@ -265,19 +265,19 @@ position: left;
 	overflow: hidden;
 }
 
+.character-display {
+	padding-top: 20px;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* set the column width and make them flexible */
+	gap: 20px; /* set the gap between the columns */
+  }
+  
 .character-info-box {
 	padding-top: 10px;
 	padding-bottom: 10px;
-	margin-top: 30px;
-	margin-right: auto;
-	margin-left: auto;
-	width: 30%;
 	background-color: rgba(11, 11, 11, 0.636);
 	border-radius: 10px;
 	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
 	backdrop-filter: blur(10px);
-}
-
-.character-display {
-	display: flex;
-}
+  }
+  
