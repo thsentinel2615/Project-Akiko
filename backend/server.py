@@ -412,7 +412,7 @@ def add_character():
     # Check if a file was uploaded and if it's allowed
     if avatar and allowed_file(avatar.filename):
         # Save the file with a secure filename
-        filename = secure_filename(name + '.png')
+        filename = secure_filename(str(char_id) + '.png')
         avatar.save(os.path.join(app.config['CHARACTER_IMAGES_FOLDER'], filename))
         # Add the file path to the character information
         avatar = filename
@@ -426,9 +426,21 @@ def add_character():
         'example_dialogue': examples,
         'avatar': avatar
     }
-    with open(app.config['CHARACTER_FOLDER']+name+'.json', 'a') as f:
+    with open(app.config['CHARACTER_FOLDER']+str(char_id)+'.json', 'a') as f:
         f.write(json.dumps(character))
     return jsonify({'message': 'Character added successfully', 'avatar': avatar})
+
+@app.route('/api/characters/<int:char_id>', methods=['DELETE'])
+def delete_character(char_id):
+    character_path = app.config['CHARACTER_FOLDER'] + str(char_id) + '.json'
+    image_path = app.config['CHARACTER_IMAGES_FOLDER'] + str(char_id) + '.png'
+    try:
+        os.remove(character_path)
+        os.remove(image_path)
+    except FileNotFoundError:
+        return jsonify({'error': 'Character not found'}), 404
+    return jsonify({'message': 'Character deleted successfully'})
+
 
 @socketio.on('add_character')
 def add_character(data):

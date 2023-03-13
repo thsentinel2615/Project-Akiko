@@ -28,3 +28,11 @@ export async function createCharacter(newCharacter) {
 export function getCharacterImageUrl(avatar) {
   return `${API_URL}/characters/images/${avatar}`;
 }
+
+export async function deleteCharacter(charId) {
+  const response = await fetch(`${API_URL}/characters/${charId}`, {
+    method: 'DELETE'
+  });
+  const data = await response.json();
+  return data;
+}
