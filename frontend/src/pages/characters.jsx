@@ -41,6 +41,7 @@ const Characters = () => {
       .then(() => {
         setCharacters(characters.map((c) => c.char_id === updatedCharacter.char_id ? updatedCharacter : c));
         closeModal();
+        window.location.reload()
       })
       .catch(error => {
         console.error(error);
