@@ -3,6 +3,7 @@ import { fetchCharacters, createCharacter, getCharacterImageUrl } from "../asset
 
 const Characters = () => {
   const [characters, setCharacters] = useState([]);
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     fetchCharacters()
@@ -39,7 +40,11 @@ const Characters = () => {
         alert("Please enter a name for your character.");
         return;
       }
-      
+      if (!characterAvatar) {
+        alert("Please enter a name for your character.");
+        return;
+      }
+
       const newCharacter = {
         char_id: Date.now(),
         char_name: characterName || "Default Name",
@@ -115,7 +120,13 @@ const Characters = () => {
       
 return (
   <div>
-    <CharacterForm onCharacterSubmit={addCharacter} />
+    <button id="character-submit" onClick={() => setShowForm(true)}>Create Character</button>
+    {showForm && (
+    <CharacterForm
+    onCharacterSubmit={addCharacter}
+    onClose={() => setShowForm(false)}
+    />
+    )}
     <div className="character-display">
       {characters.map((character) => (
         <div key={character.char_id} className="character-info-box">
