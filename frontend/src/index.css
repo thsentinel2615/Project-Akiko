@@ -189,6 +189,7 @@ position: left;
 	backdrop-filter: blur(10px);
 	border-radius: 10px;
 	padding: 10px;
+	margin-bottom: 15px;
 	border: none;
 	outline: none;
 	color: white;
@@ -210,25 +211,52 @@ position: left;
 	text-align: left;
 	margin-right: auto;
 	margin-top: 15px;
+	margin-bottom: 15px;
 }
 
 #character-submit {
+	background-color: #333;
 	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
-	background-color:rgb(48, 46, 46);
 	backdrop-filter: blur(10px);
 	border-radius: 10px;
 	padding: 10px;
+	width: 100px;
 	border: none;
 	outline: none;
 	color: white;
 	word-wrap: normal;
 	justify-content: center;
-	overflow-wrap: break-word;
 	height: auto;
-	width: 100px;
 	cursor: pointer;
+	bottom: 10px;
+	right: 10px;
+	position: absolute;
+}
+#character-submit:hover {
+    background-color: rgb(6, 136, 168);
 }
 
+#character-close {
+	background-color: #333;
+	border-radius: 10px;
+	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
+	backdrop-filter: blur(10px);
+	padding: 10px;
+	width: 100px;
+	border: none;
+	outline: none;
+	color: white;
+	word-wrap: normal;
+	justify-content: center;
+	height: auto;
+	cursor: pointer;
+	bottom: 10px;
+	left: 10px;
+	position: absolute;
+}
+#character-close:hover {
+    background-color: rgba(179, 6, 6, 0.636);
+}
 .character-form {
   margin-top: 30px;
   margin-right: auto;
@@ -239,6 +267,7 @@ position: left;
   box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
   padding: 20px;
+  overflow-y: scroll;
 }
 
 #model {
@@ -257,27 +286,80 @@ position: left;
 	backdrop-filter: blur(10px);
 	padding: 10px;
 	word-wrap: normal;
-	height: auto;
 	cursor: pointer;
 	height: 350px;
 	width: 350px;
 	border-radius: 10%;
 	overflow: hidden;
+	margin-right: auto;
+	margin-left: auto;
 }
 
+.character-display {
+	padding-top: 20px;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* set the column width and make them flexible */
+	gap: 20px; /* set the gap between the columns */
+  }
+  
 .character-info-box {
 	padding-top: 10px;
 	padding-bottom: 10px;
 	margin-top: 30px;
 	margin-right: auto;
 	margin-left: auto;
-	width: 30%;
+	width: 400px;
+	height: 500px;
 	background-color: rgba(11, 11, 11, 0.636);
 	border-radius: 10px;
 	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
 	backdrop-filter: blur(10px);
+  }
+
+.character-buttons {
+	display: grid;
+	margin-top: 30px;
+	gap: 20px; 
+}
+#character-button {
+	background-color: rgba(11, 11, 11, 0.636);
+	border-radius: 10px;
+	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
+	backdrop-filter: blur(10px);
+	border-radius: 10px;
+	padding: 15px;
+	border: none;
+	outline: none;
+	color: white;
+	word-wrap: normal;
+	justify-content: center;
+	height: auto;
+	cursor: pointer;
+}
+#character-button:hover {
+    background-color: rgb(6, 136, 168);
 }
 
-.character-display {
+.modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.39); /* semi-transparent black background */
 	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999; /* make sure the modal is on top of other content */
+	overflow-y: scroll;
+}
+
+.close {
+	color: #aaaaaa;
+	float: right;
+	font-size: 28px;
+	font-weight: bold;
+  }
+.close:hover {
+    color: rgba(179, 6, 6, 0.636);
 }

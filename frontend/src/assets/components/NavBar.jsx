@@ -8,16 +8,16 @@ return (
 	<Nav>
 		<NavMenu>
 		<NavLink to="/" activeStyle>
-			Home
+			<b>Home</b>
 		</NavLink>
 		<NavLink to="/chat" activeStyle>
-			Chat
+			<b>Chat</b>
 		</NavLink>
 		<NavLink to="/characters" activeStyle>
-			Characters
+			<b>Characters</b>
 		</NavLink>
 		<NavLink to="/settings" activeStyle>
-			Settings
+			<b>Settings</b>
 		</NavLink>
 		</NavMenu>
 	</Nav>

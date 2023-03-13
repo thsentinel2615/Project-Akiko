@@ -143,7 +143,7 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 # Folder Locations
 app.config['CHARACTER_FOLDER'] = '../shared_data/character_info/'
 app.config['CHARACTER_IMAGES_FOLDER'] = '../shared_data/character_images/'
-app.config['DEBUG'] = False
+app.config['DEBUG'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = False
 
 socketio = SocketIO(cors_allowed_origins="*")
@@ -386,6 +386,96 @@ def get_avatar_image(filename):
         return send_from_directory(app.config['CHARACTER_IMAGES_FOLDER'], filename, as_attachment=True)
     except FileNotFoundError:
         abort(404)
+
+@app.route('/api/characters', methods=['GET'])
+def get_characters():
+    characters = []
+    # loop through all the character files and load the data
+    for filename in os.listdir(app.config['CHARACTER_FOLDER']):
+        if filename.endswith('.json'):
+            with open(os.path.join(app.config['CHARACTER_FOLDER'], filename)) as f:
+                character_data = json.load(f)
+                characters.append(character_data)
+    # return the list of characters as a JSON response
+    return jsonify(characters)
+
+@app.route('/api/characters', methods=['POST'])
+def add_character():
+    # Get the character information from the request
+    char_id = request.form.get('char_id')
+    name = request.form.get('char_name')
+    description = request.form.get('char_persona')
+    scenario = request.form.get('world_scenario')
+    greeting = request.form.get('char_greeting')
+    examples = request.form.get('example_dialogue')
+    avatar = request.files['avatar']
+    # Check if a file was uploaded and if it's allowed
+    if avatar and allowed_file(avatar.filename):
+        # Save the file with a secure filename
+        filename = secure_filename(str(char_id) + '.png')
+        avatar.save(os.path.join(app.config['CHARACTER_IMAGES_FOLDER'], filename))
+        # Add the file path to the character information
+        avatar = filename
+    # Save the character information to a JSON file
+    character = {
+        'char_id': char_id,
+        'char_name': name,
+        'char_persona': description,
+        'world_scenario': scenario,
+        'char_greeting': greeting,
+        'example_dialogue': examples,
+        'avatar': avatar
+    }
+    with open(app.config['CHARACTER_FOLDER']+str(char_id)+'.json', 'a') as f:
+        f.write(json.dumps(character))
+    return jsonify({'message': 'Character added successfully', 'avatar': avatar})
+
+@app.route('/api/characters/<int:char_id>', methods=['DELETE'])
+def delete_character(char_id):
+    character_path = app.config['CHARACTER_FOLDER'] + str(char_id) + '.json'
+    image_path = app.config['CHARACTER_IMAGES_FOLDER'] + str(char_id) + '.png'
+    try:
+        os.remove(character_path)
+        os.remove(image_path)
+    except FileNotFoundError:
+        return jsonify({'error': 'Character not found'}), 404
+    return jsonify({'message': 'Character deleted successfully'})
+
+@app.route('/api/characters/<int:char_id>', methods=['PUT'])
+def update_character(char_id):
+    # Get the character information from the request
+    name = request.form.get('char_name')
+    description = request.form.get('char_persona')
+    scenario = request.form.get('world_scenario')
+    greeting = request.form.get('char_greeting')
+    examples = request.form.get('example_dialogue')
+    avatar = request.files.get('avatar')
+    # Check if a file was uploaded and if it's allowed
+    if avatar and allowed_file(avatar.filename):
+        # Save the file with a secure filename
+        filename = secure_filename(str(char_id) + '.png')
+        avatar.save(os.path.join(app.config['CHARACTER_IMAGES_FOLDER'], filename))
+        # Add the file path to the character information
+        avatar = filename
+    # Load the existing character information from the JSON file
+    character_path = app.config['CHARACTER_FOLDER'] + str(char_id) + '.json'
+    try:
+        with open(character_path, 'r') as f:
+            character = json.load(f)
+    except FileNotFoundError:
+        return jsonify({'error': 'Character not found'}), 404
+    # Update the character information
+    character['char_name'] = name
+    character['char_persona'] = description
+    character['world_scenario'] = scenario
+    character['char_greeting'] = greeting
+    character['example_dialogue'] = examples
+    if avatar:
+        character['avatar'] = avatar
+    # Save the updated character information to the JSON file
+    with open(character_path, 'w') as f:
+        json.dump(character, f)
+    return jsonify({'message': 'Character updated successfully'})
 
 @socketio.on('add_character')
 def add_character(data):
