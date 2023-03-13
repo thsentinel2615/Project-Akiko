@@ -4,6 +4,7 @@ import styled from "styled-components";
 
 export const Nav = styled.nav`
 z-index: 100;
+margin-top: 10px;
 position: relative;
 background-color: rgba(11, 11, 11, 0.636);
 border-radius: 10px;
