@@ -89,7 +89,7 @@ function handleSubmit(event) {
               onChange={handleImageChange}
               required
             />
-            <button type="submit" id="character-button">
+            <button type="submit" id="character-submit">
               <b>Create</b>
             </button>
           </div>
