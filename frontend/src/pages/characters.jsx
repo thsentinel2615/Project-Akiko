@@ -53,7 +53,7 @@ const Characters = () => {
   
 
   const delCharacter = async (character) => {
-    setCharacterToDelete(character.char_id);
+    setCharacterToDelete(character);
     setShowDeleteModal(true);
   };
 
