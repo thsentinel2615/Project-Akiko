@@ -13,7 +13,7 @@ function Modal({ children, isOpen, handleClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="modal">
+    <div className="modal-overlay">
       <button onClick={handleClose} className="close-btn">
         Close
       </button>

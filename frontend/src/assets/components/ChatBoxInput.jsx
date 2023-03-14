@@ -29,6 +29,10 @@ const ChatboxInput = ({ onSend }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
+    <div>
+      <Modal handleClose={() => setIsOpen(false)} isOpen={isOpen}>
+      This is Modal Content!
+    </Modal>
     <div className='inputBox'>
       <div className="send-input">
         <div id='FiMenu' onClick={() => setIsOpen(true)}>
@@ -50,9 +54,7 @@ const ChatboxInput = ({ onSend }) => {
         />
         <div onClick={handleSendClick} id='send'><HiOutlinePaperAirplane/></div>
       </div>
-        <Modal handleClose={() => setIsOpen(false)} isOpen={isOpen}>
-          This is Modal Content!
-        </Modal>
+    </div>
     </div>
   );
 }

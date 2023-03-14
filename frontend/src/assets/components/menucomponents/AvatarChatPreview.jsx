@@ -1,5 +1,4 @@
 import React from 'react';
-import { Portal } from "react-portal";
 import './profmenu.css'
 
 const AvatarChatPreview = ({ sender, avatar, onClose }) => {
@@ -7,8 +6,7 @@ const AvatarChatPreview = ({ sender, avatar, onClose }) => {
   const defaultAvatar = 'https://cdn.discordapp.com/attachments/1070388301397250170/1072227534713921616/tmpu7e13o19.png';
   
   return (
-    <Portal>
-    <div className='container'>
+    <div className='modal-overlay'>
       <div style={{ background: 'grey', width: '200px', height: '100px' }}>
         <div id='senderPreview'>
           <div id='senderName'>{sender}</div>
@@ -23,7 +21,6 @@ const AvatarChatPreview = ({ sender, avatar, onClose }) => {
       </div>
       <button onClick={onClose}>Close</button>
     </div>
-    </Portal>
   );
 }
 
